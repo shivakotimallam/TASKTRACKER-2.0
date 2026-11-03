@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Task Tracker</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <section id="authScreen" class="auth-screen">
+    <div class="auth-card">
+      <div class="auth-brand"><h1>Task Tracker</h1><p>Make every day count.</p></div>
+      <div class="auth-tabs">
+        <button id="loginTab" class="auth-tab active" onclick="showAuthMode('login')">Login</button>
+        <button id="signupTab" class="auth-tab" onclick="showAuthMode('signup')">Sign Up</button>
+      </div>
+      <form id="loginForm" class="auth-form" onsubmit="handleLogin(event)">
+        <h2>Welcome back</h2><p>Log in to continue tracking your progress.</p>
+        <label for="loginEmail">Email</label><input id="loginEmail" type="email" autocomplete="email" required placeholder="you@example.com">
+        <label for="loginPassword">Password</label><div class="password-input-wrapper"><input id="loginPassword" type="password" autocomplete="current-password" required placeholder="Enter your password"><button type="button" class="toggle-password" onclick="togglePasswordVisibility('loginPassword', this)">⏿</button></div>
+        <button class="auth-submit" type="submit">Login</button>
+        <p class="auth-switch"><button type="button" onclick="handleForgotPassword()">Forgot password?</button><span class="divider">|</span>New here? <button type="button" onclick="showAuthMode('signup')">Create an account</button></p>
+      </form>
+      <form id="signupForm" class="auth-form" hidden onsubmit="handleSignup(event)">
+        <h2>Create your account</h2><p>Your tasks and progress are separated by account on this browser.</p>
+        <label for="signupName">Full name</label><input id="signupName" type="text" autocomplete="name" required placeholder="Enter your full name">
+        <label for="signupEmail">Email</label><input id="signupEmail" type="email" autocomplete="email" required placeholder="you@example.com">
+        <label for="signupPassword">Password</label><div class="password-input-wrapper"><input id="signupPassword" type="password" autocomplete="new-password" minlength="8" required placeholder="At least 8 characters"><button type="button" class="toggle-password" onclick="togglePasswordVisibility('signupPassword', this)">⏿</button></div>
+        <label for="signupConfirmPassword">Confirm Password</label><div class="password-input-wrapper"><input id="signupConfirmPassword" type="password" autocomplete="new-password" minlength="8" required placeholder="Confirm your password"><button type="button" class="toggle-password" onclick="togglePasswordVisibility('signupConfirmPassword', this)">⏿</button></div>
+        <button class="auth-submit" type="submit">Create Account</button>
+        <p class="auth-switch">Already have an account? <button type="button" onclick="showAuthMode('login')">Login</button></p>
+      </form>
+      <p id="authError" class="auth-error" hidden></p>
+      <p id="authSuccess" class="auth-success" hidden></p>
+    </div>
+  </section>
+  <div class="app-container" id="appContainer">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <h1 onclick="switchView('dashboard', document.querySelector('[data-view=\'dashboard\']'))" style="cursor:pointer">Task Tracker</h1>
+        <span id="headerEmoji" class="header-emoji" onclick="showMotivationPopup()" style="cursor:pointer; display:none">⭐</span>
+      </div>
+      <div id="motivationPopup" class="motivation-popup">
+        <div class="popup-content">
+          <span id="popupMessage" class="popup-message">You can do it!</span>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <button class="nav-btn active" data-view="dashboard" onclick="switchView('dashboard', this)"><span class="nav-icon">▦</span>Dashboard</button>
+        <button class="nav-btn" data-view="tasks" onclick="switchView('tasks', this)"><span class="nav-icon">☑</span>Tasks</button>
+        <button class="nav-btn" data-view="calendar" onclick="switchView('calendar', this)"><span class="nav-icon">▦</span>Calendar</button>
+        <button class="nav-btn" data-view="templates" onclick="switchView('templates', this)"><span class="nav-icon">📋</span>Templates</button>
+      </nav>
+      <div class="sidebar-bottom">
+        <button class="nav-btn" data-view="settings" onclick="switchView('settings', this)"><span class="nav-icon">⚙</span>Settings</button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="page-header">
+        <div><h2 id="viewTitle">Dashboard</h2><p id="viewSubtitle">Your daily progress at a glance.</p></div>
+        <div class="today-label" id="todayLabel"></div>
+      </header>
+
+      <section id="dashboardView" class="view-section active">
+        <div class="stats">
+          <div class="stat-box"><h3>Total Tasks</h3><p id="totalTasks">0</p></div>
+          <div class="stat-box"><h3>Completed</h3><p id="completedTasks">0</p></div>
+          <div class="stat-box"><h3>Consistency Streak</h3><p id="totalStreak">0</p></div>
+          <div class="stat-box clickable" onclick="openGoalsModal()"><h3>Long-term Goals</h3><p id="totalGoals">0</p></div>
+        </div>
+        <div class="progress-container">
+          <label>Today's Progress <strong id="progressText">0%</strong></label>
+          <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+        </div>
+        <div class="dashboard-grid">
+          <section class="panel">
+            <div class="panel-heading"><h3>Today's Tasks</h3><button class="text-btn" onclick="switchView('tasks', document.querySelector('[data-view=tasks]'))">View all</button></div>
+            <ul id="dashboardTaskList" class="task-list"></ul>
+          </section>
+          <section class="panel analytics-panel">
+            <div class="panel-heading"><div><h3>Consistency Analytics</h3><p class="analytics-subtitle">Your daily completion trend over the last 14 days</p></div></div>
+            <div class="analytics-chart-wrap"><svg id="consistencyChart" class="consistency-chart" viewBox="0 0 640 220" role="img" aria-label="Daily task completion percentage chart"></svg></div>
+            <div class="legend"><span><i class="dot green"></i> Excellent (75%+)</span><span><i class="dot yellow"></i> Good (50-75%)</span><span><i class="dot red"></i> Needs Work (&lt;50%)</span></div>
+          </section>
+        </div>
+      </section>
+
+      <section id="tasksView" class="view-section">
+        <section class="panel">
+          <div class="panel-heading"><h3>My Tasks</h3><button onclick="openTaskModal()">+ Add New Task</button></div>
+          <div class="toolbar">
+            <input type="search" id="taskSearch" placeholder="Search tasks..." oninput="renderTasks()">
+            <input type="date" id="taskDateFilter" onchange="renderTasks()">
+            <div class="filters">
+              <button class="filter-btn active" onclick="filterTasks('all', this)">All</button>
+              <button class="filter-btn" onclick="filterTasks('active', this)">Active</button>
+              <button class="filter-btn" onclick="filterTasks('completed', this)">Completed</button>
+            </div>
+          </div>
+          <ul id="taskList" class="task-list"></ul>
+        </section>
+      </section>
+
+      <section id="calendarView" class="view-section">
+        <section class="panel">
+          <div class="panel-heading calendar-heading">
+            <h3>Activity Calendar</h3>
+            <div class="month-controls"><button class="month-btn" onclick="changeMonth(-1)" aria-label="Previous month">‹</button><strong id="calendarMonth"></strong><button class="month-btn" onclick="changeMonth(1)" aria-label="Next month">›</button></div>
+          </div>
+          <div class="calendar-legend">
+            <span><i class="dot green"></i> Above 75%</span><span><i class="dot yellow"></i> 50%–75%</span><span><i class="dot red"></i> Below 50%</span><span><i class="dot neutral"></i> No activity</span>
+          </div>
+          <div class="calendar-grid" id="calendarGrid"></div>
+        </section>
+        <section class="panel day-summary" id="daySummary">
+          <div class="panel-heading"><h3 id="summaryTitle">Select a date</h3><span id="summaryPercentage" class="percentage-pill">—</span></div>
+          <div id="summaryContent" class="summary-content">Choose any date on the calendar to view its task summary.</div>
+          <div id="summaryTaskList" class="summary-task-list"></div>
+        </section>
+      </section>
+
+      <section id="templatesView" class="view-section">
+        <section class="panel">
+          <div class="panel-heading"><h3>My Templates</h3><button onclick="openCreateTemplateModal()">+ Create Template</button></div>
+          <div id="templatesList" class="templates-grid"></div>
+        </section>
+      </section>
+
+      <section id="templateDetailView" class="view-section">
+        <section class="panel">
+          <div class="panel-heading">
+            <div>
+              <h3 id="templateDetailTitle">Template Name</h3>
+              <p id="templateDetailSubtitle">Manage your timetable tasks</p>
+            </div>
+            <div class="template-detail-actions">
+              <button onclick="openAddTemplateTaskModal()">+ Add Task</button>
+              <button onclick="openImportTemplateModal()">Import from Template</button>
+              <button onclick="openApplyTemplateModal()">Apply Template</button>
+              <button class="edit-btn" onclick="openEditTemplateModal()">Edit Template</button>
+              <button class="delete-btn" onclick="deleteCurrentTemplate()">Delete Template</button>
+              <button class="cancel-btn" onclick="switchView('templates', document.querySelector('[data-view=templates]'))">Back</button>
+            </div>
+          </div>
+          <div id="templateTasksList" class="template-tasks-list"></div>
+        </section>
+      </section>
+
+      <section id="settingsView" class="view-section">
+        <section class="panel settings-panel">
+          <div class="panel-heading"><h3>Profile Settings</h3></div>
+          <div class="profile-row"><span class="profile-label">Full name</span><strong id="profileName">Your name</strong></div>
+          <div class="profile-row"><span class="profile-label">Email address</span><strong id="profileEmail">your@email.com</strong></div>
+          <div class="profile-row"><span class="profile-label">Password</span><strong id="profilePassword">••••••••</strong></div>
+          <div class="settings-actions settings-button-row"><button onclick="openEmailModal()">Change Email</button><button onclick="openPasswordModal()">Change Password</button><button class="logout-btn" onclick="logout()">Log Out</button></div>
+        </section>
+        <section class="panel settings-panel" style="margin-top:20px">
+          <div class="panel-heading"><h3>Motivation Settings</h3></div>
+          <div class="form-group">
+            <label for="userEmoji">Your Emoji</label>
+            <input type="text" id="userEmoji" placeholder="e.g., 🚀, 💪, ⭐" maxlength="2" style="max-width:100px">
+          </div>
+          <div class="form-group">
+            <label for="userMessage">Your Motivational Message</label>
+            <input type="text" id="userMessage" placeholder="e.g., You can do it! Keep going!" maxlength="100">
+          </div>
+          <div class="settings-actions">
+            <button onclick="saveMotivationSettings()">Save Motivation Settings</button>
+          </div>
+        </section>
+        <div style="text-align:center; margin-top:30px; font-size:10px; color:#999;">Shivakoti Mallam</div>
+      </section>
+    </main>
+  </div>
+
+  <div id="taskModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header"><h2 id="taskModalTitle">Add New Task</h2><button class="close" onclick="closeTaskModal()" aria-label="Close">&times;</button></div>
+      <div class="modal-body">
+        <div class="form-group"><label for="modalTaskName">Task Name *</label><input type="text" id="modalTaskName" placeholder="Enter task name..."></div>
+        <div class="form-group"><label for="modalTaskPriority">Priority</label><select id="modalTaskPriority"><option value="high">High Priority</option><option value="medium" selected>Medium Priority</option><option value="low">Low Priority</option></select></div>
+        <div class="form-group"><label for="modalTaskRepetition">Repetition</label><select id="modalTaskRepetition" onchange="toggleCustomDays()"><option value="once">Once</option><option value="daily">Daily</option><option value="custom">Custom Days</option></select></div>
+        <div class="form-group"><label for="modalTaskDueDate">Repeat until (optional)</label><input type="date" id="modalTaskDueDate"><small class="field-help">Daily and Custom Days tasks stop appearing after this date. Leave empty for no end date.</small></div>
+        <div class="form-group" id="customDaysGroup" hidden><label>Select Days</label><div class="days-selector">
+          <label><input type="checkbox" value="Sunday"> Sun</label><label><input type="checkbox" value="Monday"> Mon</label><label><input type="checkbox" value="Tuesday"> Tue</label><label><input type="checkbox" value="Wednesday"> Wed</label><label><input type="checkbox" value="Thursday"> Thu</label><label><input type="checkbox" value="Friday"> Fri</label><label><input type="checkbox" value="Saturday"> Sat</label>
+        </div></div>
+      </div>
+      <div class="modal-footer"><button class="cancel-btn" onclick="closeTaskModal()">Cancel</button><button class="save-btn" onclick="saveTaskFromModal()">Save Task</button></div>
+    </div>
+  </div>
+
+  <div id="emailModal" class="modal">
+    <div class="modal-content compact-modal">
+      <div class="modal-header"><h2>Change Email</h2><button class="close" onclick="closeEmailModal()" aria-label="Close">&times;</button></div>
+      <div class="modal-body">
+        <div class="form-group"><label for="newEmail">New Email Address</label><input type="email" id="newEmail" autocomplete="email" required></div>
+        <div class="form-group"><label for="emailConfirmPassword">Confirm Password</label><input type="password" id="emailConfirmPassword" autocomplete="current-password" required></div>
+        
+      </div>
+      <div class="modal-footer"><button class="cancel-btn" onclick="closeEmailModal()">Cancel</button><button class="save-btn" onclick="submitEmailChange()">Save Email</button></div>
+    </div>
+  </div>
+  <div id="passwordModal" class="modal">
+    <div class="modal-content compact-modal">
+      <div class="modal-header"><h2>Change Password</h2><button class="close" onclick="closePasswordModal()" aria-label="Close">&times;</button></div>
+      <div class="modal-body">
+        <div class="form-group"><label for="newPassword">New Password</label><input type="password" id="newPassword" autocomplete="new-password" minlength="8" required placeholder="At least 8 characters"></div>
+        <div class="form-group"><label for="confirmPassword">Confirm New Password</label><input type="password" id="confirmPassword" autocomplete="new-password" minlength="8" required placeholder="Confirm your password"></div>
+      </div>
+      <div class="modal-footer"><button class="cancel-btn" onclick="closePasswordModal()">Cancel</button><button class="save-btn" onclick="submitPasswordChange()">Save Password</button></div>
+    </div>
+  </div>
+  <div id="resetPasswordModal" class="modal">
+    <div class="modal-content compact-modal">
+      <div class="modal-header"><h2>Reset Password</h2><button class="close" onclick="closeResetPasswordModal()" aria-label="Close">&times;</button></div>
+      <div class="modal-body">
+        <div class="form-group"><label for="resetNewPassword">New Password</label><input type="password" id="resetNewPassword" autocomplete="new-password" minlength="8" required placeholder="At least 8 characters"></div>
+        <div class="form-group"><label for="resetConfirmPassword">Confirm New Password</label><input type="password" id="resetConfirmPassword" autocomplete="new-password" minlength="8" required placeholder="Confirm your password"></div>
+        <p class="settings-note">Enter your new password. Make sure it's at least 8 characters long.</p>
+      </div>
+      <div class="modal-footer"><button class="cancel-btn" onclick="closeResetPasswordModal()">Cancel</button><button class="save-btn" onclick="submitPasswordReset()">Reset Password</button></div>
+    </div>
+  </div>
+
+  <!-- Template Modals -->
+  <div id="createTemplateModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header"><h2>Create Template</h2><button class="close" onclick="closeCreateTemplateModal()" aria-label="Close">&times;</button></div>
+      <div class="modal-body">
+        <div class="form-group"><label for="templateName">Template Name *</label><input type="text" id="templateName" placeholder="e.g., College Timetable"></div>
+        <div class="form-group"><label for="templateIcon">Icon *</label>
+          <div class="icon-picker" id="iconPicker">
+            <button type="button" class="icon-option" data-icon="📅" onclick="selectIcon('📅')">📅</button>
+            <button type="button" class="icon-option" data-icon="📚" onclick="selectIcon('📚')">📚</button>
+            <button type="button" class="icon-option" data-icon="🎓" onclick="selectIcon('🎓')">🎓</button>
+            <button type="button" class="icon-option" data-icon="💻" onclick="selectIcon('💻')">💻</button>
+            <button type="button" class="icon-option" data-icon="🏋️" onclick="selectIcon('🏋️')">🏋️</button>
+            <button type="button" class="icon-option" data-icon="💼" onclick="selectIcon('💼')">💼</button>
+            <button type="button" class="icon-option" data-icon="🎯" onclick="selectIcon('🎯')">🎯</button>
+            <button type="button" class="icon-option" data-icon="☕" onclick="selectIcon('☕')">☕</button>
+            <button type="button" class="icon-option" data-icon="🏠" onclick="selectIcon('🏠')">🏠</button>
+            <button type="button" class="icon-option" data-icon="🌙" onclick="selectIcon('🌙')">🌙</button>
+            <button type="button" class="icon-option" data-icon="🎵" onclick="selectIcon('🎵')">🎵</button>
+            <button type="button" class="icon-option" data-icon="✏️" onclick="selectIcon('✏️')">✏️</button>
+          </div>
+          <input type="hidden" id="selectedIcon" value="📅">
+        </div>
+      </div>
+      <div class="modal-footer"><button class="cancel-btn" onclick="closeCreateTemplateModal()">Cancel</button><button class="save-btn" onclick="saveTemplate()">Create Template</button></div>
+    </div>
+  </div>
+
+  <div id="editTemplateModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header"><h2>Edit Template</h2><button class="close" onclick="closeEditTemplateModal()" aria-label="Close">&times;</button></div>
+      <div class="modal-body">
+        <div class="form-group"><label for="editTemplateName">Template Name *</label><input type="text" id="editTemplateName" placeholder="e.g., College Timetable"></div>
+        <div class="form-group"><label for="editTemplateIcon">Icon *</label>
+          <div class="icon-picker" id="editIconPicker">
+            <button type="button" class="icon-option" data-icon="📅" onclick="selectEditIcon('📅')">📅</button>
+            <button type="button" class="icon-option" data-icon="📚" onclick="selectEditIcon('📚')">📚</button>
+            <button type="button" class="icon-option" data-icon="🎓" onclick="selectEditIcon('🎓')">🎓</button>
+            <button type="button" class="icon-option" data-icon="💻" onclick="selectEditIcon('💻')">💻</button>
+            <button type="button" class="icon-option" data-icon="🏋️" onclick="selectEditIcon('🏋️')">🏋️</button>
+            <button type="button" class="icon-option" data-icon="💼" onclick="selectEditIcon('💼')">💼</button>
+            <button type="button" class="icon-option" data-icon="🎯" onclick="selectEditIcon('🎯')">🎯</button>
+            <button type="button" class="icon-option" data-icon="☕" onclick="selectEditIcon('☕')">☕</button>
+            <button type="button" class="icon-option" data-icon="🏠" onclick="selectEditIcon('🏠')">🏠</button>
+            <button type="button" class="icon-option" data-icon="🌙" onclick="selectEditIcon('🌙')">🌙</button>
+            <button type="button" class="icon-option" data-icon="🎵" onclick="selectEditIcon('🎵')">🎵</button>
+            <button type="button" class="icon-option" data-icon="✏️" onclick="selectEditIcon('✏️')">✏️</button>
+          </div>
+          <input type="hidden" id="editSelectedIcon" value="📅">
+        </div>
+      </div>
+      <div class="modal-footer"><button class="cancel-btn" onclick="closeEditTemplateModal()">Cancel</button><button class="save-btn" onclick="updateTemplate()">Save Changes</button></div>
+    </div>
+  </div>
+
+  <div id="addTemplateTaskModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header"><h2 id="templateTaskModalTitle">Add Task to Template</h2><button class="close" onclick="closeAddTemplateTaskModal()" aria-label="Close">&times;</button></div>
+      <div class="modal-body">
+        <div class="form-group"><label for="templateTaskName">Task Name *</label><input type="text" id="templateTaskName" placeholder="e.g., Study DBMS"></div>
+        <div class="form-group"><label for="templateTaskPriority">Priority</label>
+          <select id="templateTaskPriority">
+            <option value="high">High Priority</option>
+            <option value="medium" selected>Medium Priority</option>
+            <option value="low">Low Priority</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Start Time *</label>
+          <div class="time-picker-wrapper">
+            <input type="time" id="templateTaskStartTime" class="time-input">
+            <button type="button" class="time-picker-btn" onclick="openTimePicker('start')">🕐 Pick Time</button>
+          </div>
+        </div>
+        <div class="form-group"><label>End Time *</label>
+          <div class="time-picker-wrapper">
+            <input type="time" id="templateTaskEndTime" class="time-input">
+            <button type="button" class="time-picker-btn" onclick="openTimePicker('end')">🕐 Pick Time</button>
+          </div>
+        </div>
+        <div class="form-group"><label>Select Days *</label><div class="days-selector">
+          <label><input type="checkbox" value="Sunday"> Sun</label>
+          <label><input type="checkbox" value="Monday"> Mon</label>
+          <label><input type="checkbox" value="Tuesday"> Tue</label>
+          <label><input type="checkbox" value="Wednesday"> Wed</label>
+          <label><input type="checkbox" value="Thursday"> Thu</label>
+          <label><input type="checkbox" value="Friday"> Fri</label>
+          <label><input type="checkbox" value="Saturday"> Sat</label>
+        </div></div>
+        <p id="templateTaskError" class="auth-error" hidden></p>
+      </div>
+      <div class="modal-footer"><button class="cancel-btn" onclick="closeAddTemplateTaskModal()">Cancel</button><button class="save-btn" onclick="saveTemplateTask()">Save Task</button></div>
+    </div>
+  </div>
+
+  <!-- Circular Time Picker Modal -->
+  <div id="timePickerModal" class="modal">
+    <div class="modal-content time-picker-modal">
+      <div class="modal-header"><h2>Select Time</h2><button class="close" onclick="closeTimePicker()" aria-label="Close">&times;</button></div>
+      <div class="modal-body">
+        <div class="time-picker-container">
+          <div class="clock-face" id="clockFace">
+            <!-- Clock face will be generated by JS -->
+          </div>
+          <div class="time-display">
+            <span id="selectedHour">09</span>:<span id="selectedMinute">00</span>
+            <span id="selectedPeriod">AM</span>
+          </div>
+          <div class="time-picker-controls">
+            <button class="time-control-btn" onclick="togglePeriod()">AM/PM</button>
+            <button class="time-control-btn" onclick="setTimePickerMode('hour')">Hours</button>
+            <button class="time-control-btn" onclick="setTimePickerMode('minute')">Minutes</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer"><button class="cancel-btn" onclick="closeTimePicker()">Cancel</button><button class="save-btn" onclick="confirmTimeSelection()">Set Time</button></div>
+    </div>
+  </div>
+
+  <div id="applyTemplateModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header"><h2>Apply Template to Dates</h2><button class="close" onclick="closeApplyTemplateModal()" aria-label="Close">&times;</button></div>
+      <div class="modal-body">
+        <div class="form-group"><label for="applyStartDate">Start Date *</label><input type="date" id="applyStartDate"></div>
+        <div class="form-group"><label for="applyEndDate">End Date *</label><input type="date" id="applyEndDate"></div>
+        <div class="form-group"><label for="applyRecurrenceType">Task Recurrence *</label>
+          <select id="applyRecurrenceType" onchange="toggleApplyRecurrenceOptions()">
+            <option value="once">One-time (specific dates only)</option>
+            <option value="daily">Daily (repeats every day)</option>
+            <option value="custom">Custom Days (repeats on selected days)</option>
+          </select>
+          <small class="field-help">One-time: Tasks only on selected dates. Daily: Tasks repeat daily. Custom: Tasks repeat on the template's selected days.</small>
+        </div>
+        <div class="form-group" id="applyRepeatUntilGroup" hidden><label for="applyRepeatUntil">Repeat until (optional)</label><input type="date" id="applyRepeatUntil"><small class="field-help">Tasks stop appearing after this date. Leave empty for no end date.</small></div>
+        <div id="applyTemplatePreview" class="apply-preview"></div>
+        <p id="applyTemplateError" class="auth-error" hidden></p>
+      </div>
+      <div class="modal-footer"><button class="cancel-btn" onclick="closeApplyTemplateModal()">Cancel</button><button class="save-btn" onclick="applyTemplate()">Apply Template</button></div>
+    </div>
+  </div>
+
+  <div id="importTemplateModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header"><h2>Import Tasks from Template</h2><button class="close" onclick="closeImportTemplateModal()" aria-label="Close">&times;</button></div>
+      <div class="modal-body">
+        <div class="form-group"><label for="importTemplateSelect">Select Template *</label>
+          <select id="importTemplateSelect">
+            <option value="">-- Choose a template --</option>
+          </select>
+        </div>
+        <div id="importTemplatePreview" class="import-preview"></div>
+        <p id="importTemplateError" class="auth-error" hidden></p>
+      </div>
+      <div class="modal-footer"><button class="cancel-btn" onclick="closeImportTemplateModal()">Cancel</button><button class="save-btn" onclick="importTemplateTasks()">Import Tasks</button></div>
+    </div>
+  </div>
+
+  <div id="goalsModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header"><h2>Long-term Goals</h2><button class="close" onclick="closeGoalsModal()" aria-label="Close">&times;</button></div>
+      <div class="modal-body">
+        <div id="goalFormContainer" hidden>
+          <div class="form-group"><label for="goalName">Goal Name *</label><input type="text" id="goalName" placeholder="e.g., Complete Certification"></div>
+          <div class="form-group"><label for="goalDeadline">Deadline *</label><input type="date" id="goalDeadline"></div>
+          <div class="form-group"><label for="goalDescription">Description (optional)</label><textarea id="goalDescription" rows="3" placeholder="Add details about your goal..."></textarea></div>
+          <p id="goalError" class="auth-error" hidden></p>
+        </div>
+        <div id="goalsList" class="goals-list"></div>
+      </div>
+      <div class="modal-footer">
+        <button id="addGoalBtn" class="save-btn" onclick="showGoalForm()">+ Add Goal</button>
+        <button id="cancelGoalBtn" class="cancel-btn" onclick="hideGoalForm()" hidden>Cancel</button>
+        <button id="saveGoalBtn" class="save-btn" onclick="saveGoal()" hidden>Save Goal</button>
+        <button class="cancel-btn" onclick="closeGoalsModal()">Close</button>
+      </div>
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="js/config.js?v=3"></script>
+  <script src="script.js?v=67"></script>
+</body>
+</html>
